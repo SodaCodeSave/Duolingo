@@ -46,7 +46,7 @@ class Duolingo(object):
     USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 " \
                  "Safari/537.36"
 
-    def __init__(self, username, password=None, *, jwt=None, session_file=None):
+    def __init__(self, username, password=None, *, jwt=None, session_file=None, base_url="https://www.duolingo.com"):
         """
         :param username: Username to use for duolingo
         :param password: Password to authenticate as user.
@@ -61,6 +61,7 @@ class Duolingo(object):
         self.session = requests.Session()
         self.leader_data = None
         self.jwt = jwt
+        self.base_url = base_url
 
         if password or jwt or session_file:
             self._login()
@@ -99,7 +100,7 @@ class Duolingo(object):
             return True
         self.jwt = None
 
-        login_url = "https://www.duolingo.com/login"
+        login_url = self.base_url + "/login"
         data = {"login": self.username, "password": self.password}
         request = self._make_req(login_url, data)
         attempt = request.json()
@@ -132,14 +133,14 @@ class Duolingo(object):
     def get_user_url_by_id(self, fields=None):
         if fields is None:
             fields = []
-        url = 'https://www.duolingo.com/2017-06-30/users/{}'.format(self.user_data.id)
+        url = self.base_url + '/2017-06-30/users/{}'.format(self.user_data.id)
         fields_params = requests.utils.requote_uri(','.join(fields))
         if fields_params:
             url += '?fields={}'.format(fields_params)
         return url
 
     def get_user_url(self):
-        return "https://duolingo.com/users/%s" % self.username
+        return self.base_url + "/users/%s" % self.username
 
     def set_username(self, username):
         self.username = username
@@ -165,7 +166,7 @@ class Duolingo(object):
         if isinstance(before, datetime):
             before = before.strftime("%Y.%m.%d %H:%M:%S")
 
-        url = 'https://www.duolingo.com/friendships/leaderboard_activity?unit={}&_={}'
+        url = self.base_url + '/friendships/leaderboard_activity?unit={}&_={}'
         url = url.format(unit, before)
 
         self.leader_data = self._make_req(url).json()
@@ -182,7 +183,7 @@ class Duolingo(object):
         return sorted(data, key=lambda user: user['points'], reverse=True)
 
     def buy_item(self, item_name, abbr):
-        url = 'https://www.duolingo.com/2017-06-30/users/{}/shop-items'
+        url = self.base_url + '/2017-06-30/users/{}/shop-items'
         url = url.format(self.user_data.id)
 
         data = {'itemName': item_name, 'learningLanguage': abbr}
@@ -221,7 +222,7 @@ class Duolingo(object):
             return True
         except AlreadyHaveStoreItemException:
             return False
-        
+
     def buy_weekend_amulet(self):
         """
         figure out the users current learning language
@@ -235,7 +236,7 @@ class Duolingo(object):
             return True
         except AlreadyHaveStoreItemException:
             return False
-    
+
 
     def _switch_language(self, lang):
         """
@@ -246,7 +247,7 @@ class Duolingo(object):
         :type lang: str
         """
         data = {"learning_language": lang}
-        url = "https://www.duolingo.com/switch_language"
+        url = self.base_url + "/switch_language"
         request = self._make_req(url, data)
 
         try:
@@ -544,7 +545,7 @@ class Duolingo(object):
         if language_abbr and not self._is_current_language(language_abbr):
             self._switch_language(language_abbr)
 
-        overview_url = "https://www.duolingo.com/vocabulary/overview"
+        overview_url = self.base_url + "/vocabulary/overview"
         overview_request = self._make_req(overview_url)
         overview = overview_request.json()
 
@@ -557,7 +558,7 @@ class Duolingo(object):
     def _homepage(self):
         if self._homepage_text:
             return self._homepage_text
-        homepage_url = "https://www.duolingo.com"
+        homepage_url = self.base_url + ""
         request = self._make_req(homepage_url)
         self._homepage_text = request.text
         return self._homepage
@@ -642,7 +643,7 @@ class Duolingo(object):
                 "juicy": True,
                 "smartTipsVersion": 2
             }
-            resp = self._make_req("https://www.duolingo.com/2017-06-30/sessions", req_data)
+            resp = self._make_req(self.base_url + "/2017-06-30/sessions", req_data)
             if resp.status_code != 200:
                 continue
             resp_data = resp.json()
@@ -687,7 +688,7 @@ class Duolingo(object):
         :type: str
         :return: The dictionary entry for the given word
         """
-        url = "https://www.duolingo.com/api/1/dictionary_page?lexeme_id=%s" % lexeme_id
+        url = self.base_url + "/api/1/dictionary_page?lexeme_id=%s" % lexeme_id
 
         request = self.session.get(url)
 
